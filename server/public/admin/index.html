@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEXIA - Admin</title>
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --sidebar-bg: #0D0F13;
+    --card-bg: #13151A;
+    --border: #1E2128;
+    --primary: #CC0000;
+    --primary-hover: #A30000;
+    --text: #F0F2F5;
+    --muted: #9AA3B5;
+    --sidebar-w: 240px;
+    --radius: 10px;
+    --radius-sm: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2A2E38; }
+
+  /* Login */
+  .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px; width: 100%; max-width: 400px; }
+  .login-box h1 { font-size: 24px; margin-bottom: 8px; }
+  .login-box h1 span { color: var(--primary); }
+  .login-box p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 14px; outline: none; font-family: var(--font); }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-group select { cursor: pointer; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+
+  .btn { padding: 10px 20px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; font-weight: 600; transition: background .15s, opacity .15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover:not(:disabled) { background: #2A2E38; }
+  .btn-danger { background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 4px 12px; font-size: 12px; }
+  .btn-danger:hover:not(:disabled) { background: var(--primary); color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-ghost { background: transparent; color: var(--muted); padding: 6px 10px; }
+  .btn-ghost:hover:not(:disabled) { color: var(--text); background: rgba(255,255,255,.05); }
+  .btn-icon { background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 4px; font-size: 16px; line-height: 1; transition: color .15s; }
+  .btn-icon:hover { color: var(--text); }
+  .btn-icon.danger:hover { color: var(--primary); }
+
+  .error { color: var(--primary); font-size: 13px; margin-top: 12px; display: none; }
+
+  /* Layout */
+  .app { display: none; min-height: 100vh; }
+  .sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 50; }
+  .sidebar-logo { padding: 20px 20px 12px; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo span { color: var(--primary); }
+  .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-sm); color: var(--muted); cursor: pointer; font-size: 14px; transition: all .15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+  .nav-item.active { background: rgba(204,0,0,.12); color: var(--primary); }
+  .nav-item .icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
+  .sidebar-footer { padding: 12px 10px; border-top: 1px solid var(--border); }
+  .sidebar-footer .nav-item { color: var(--muted); font-size: 13px; }
+  .sidebar-footer .nav-item:hover { color: var(--text); }
+
+  .content { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+  .content-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px; }
+  .content-header h2 { font-size: 20px; font-weight: 600; }
+  .content-header .user-area { display: flex; align-items: center; gap: 16px; }
+  .content-header .user-area span { color: var(--muted); font-size: 14px; }
+  .content-body { padding: 24px 28px; flex: 1; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
+  .stat-card .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .stat-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; opacity: .7; }
+
+  /* Sections */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--card-bg); border-radius: var(--radius); padding: 4px; flex-wrap: wrap; }
+  .tab { padding: 8px 20px; border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: var(--radius-sm); font-size: 14px; transition: all .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--primary); color: white; }
+  .tab .count { background: var(--border); padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; }
+  .tab.active .count { background: rgba(255,255,255,.2); }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 12px 16px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .text-muted { color: var(--muted); }
+  .text-primary { color: var(--primary); }
+
+  /* Tags / Badges */
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-newsletter { background: rgba(74,222,128,.12); color: #4ADE80; }
+  .tag-project { background: rgba(192,132,252,.12); color: #C084FC; }
+  .tag-lead { background: rgba(59,130,246,.12); color: #60A5FA; }
+  .tag-active { background: rgba(74,222,128,.12); color: #4ADE80; }
+  .tag-inactive { background: rgba(156,163,175,.12); color: #9CA3AF; }
+  .tag-low { background: rgba(74,222,128,.12); color: #4ADE80; }
+  .tag-medium { background: rgba(251,191,36,.12); color: #FBBF24; }
+  .tag-high { background: rgba(251,146,60,.12); color: #FB923C; }
+  .tag-critical { background: rgba(239,68,68,.12); color: #EF4444; }
+  .tag-open { background: rgba(59,130,246,.12); color: #60A5FA; }
+  .tag-in-progress { background: rgba(251,191,36,.12); color: #FBBF24; }
+  .tag-resolved { background: rgba(74,222,128,.12); color: #4ADE80; }
+  .tag-closed { background: rgba(156,163,175,.12); color: #9CA3AF; }
+
+  /* Toolbar */
+  .toolbar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .toolbar .search-box { flex: 1; min-width: 200px; position: relative; }
+  .toolbar .search-box input { width: 100%; padding: 9px 14px 9px 36px; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; outline: none; }
+  .toolbar .search-box input:focus { border-color: var(--primary); }
+  .toolbar .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+  .toolbar select { padding: 9px 14px; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; outline: none; cursor: pointer; }
+  .toolbar select:focus { border-color: var(--primary); }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; padding: 28px; }
+  .modal h3 { font-size: 18px; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .modal-wide { max-width: 720px; }
+
+  /* Loading / Empty */
+  .loading { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-state h3 { margin-bottom: 8px; color: var(--text); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 24px; border-radius: var(--radius-sm); font-size: 14px; display: none; z-index: 200; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+  .toast.success { background: #166534; color: #BBF7D0; }
+  .toast.error { background: #7F1D1D; color: #FECACA; }
+
+  /* Dashboard grid */
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .dash-grid .full { grid-column: 1 / -1; }
+  .dash-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .dash-card-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; }
+  .dash-card-body { padding: 0; }
+  .dash-card-body .mini-table td { padding: 10px 16px; font-size: 13px; }
+  .dash-card-body .mini-table tr:first-child td { border-top: none; }
+
+  /* Tickets detail */
+  .ticket-detail { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 16px; }
+  .ticket-detail-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .ticket-detail-body { padding: 20px; }
+  .ticket-detail-body .field { margin-bottom: 8px; }
+  .ticket-detail-body .field .label { color: var(--muted); font-size: 12px; }
+  .ticket-detail-body .field .value { font-size: 14px; }
+  .reply-item { padding: 12px 16px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 8px; }
+  .reply-item .meta { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .reply-item .text { font-size: 14px; }
+  .reply-form { margin-top: 16px; }
+  .reply-form textarea { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; outline: none; min-height: 70px; font-family: var(--font); resize: vertical; }
+  .reply-form textarea:focus { border-color: var(--primary); }
+
+  /* Email compose */
+  .email-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .compose-card, .log-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
+  .compose-card h3, .log-card h3 { font-size: 16px; margin-bottom: 16px; }
+  .send-result { margin-top: 12px; display: none; font-size: 14px; }
+  .send-result .sent { color: #4ADE80; }
+  .send-result .failed { color: #EF4444; margin-left: 16px; }
+
+  /* Database */
+  .db-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .db-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color .15s; }
+  .db-card:hover { border-color: var(--primary); }
+  .db-card .db-name { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .db-card .db-count { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .db-card .db-cols { font-size: 12px; color: var(--muted); }
+  .db-card .db-cols span { display: inline-block; background: rgba(255,255,255,.05); padding: 2px 8px; border-radius: 4px; margin: 2px 2px 0 0; }
+  .query-area { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+  .query-area textarea { width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; outline: none; font-family: 'Courier New', monospace; min-height: 80px; resize: vertical; }
+  .query-area textarea:focus { border-color: var(--primary); }
+  .query-area .query-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+  .query-area .query-actions .hint { font-size: 12px; color: var(--muted); }
+  .query-result { overflow-x: auto; }
+  .query-result table { font-size: 12px; }
+  .query-result table th, .query-result table td { padding: 8px 12px; }
+
+  /* Clickable row */
+  .clickable { cursor: pointer; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 56px; }
+    .sidebar-logo { font-size: 16px; padding: 16px 12px; text-align: center; }
+    .sidebar-logo span { display: inline; }
+    .nav-item { justify-content: center; padding: 10px; }
+    .nav-item .label { display: none; }
+    .content { margin-left: 56px; }
+    .content-body { padding: 16px; }
+    .dash-grid { grid-template-columns: 1fr; }
+    .email-layout { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .content-header { padding: 16px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .toolbar { flex-direction: column; }
+    .toolbar .search-box { min-width: 100%; }
+    .modal { padding: 20px; }
+    .form-row { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginPage" class="login-page">
+  <div class="login-box">
+    <h1><span>HEXIA</span> Admin</h1>
+    <p>Panel de administraci&oacute;n de la landing page</p>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Contrase&ntilde;a</label>
+      <input type="password" id="loginPass" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" autocomplete="current-password">
+    </div>
+    <div class="error" id="loginError">Credenciales inv&aacute;lidas</div>
+    <button class="btn btn-primary" id="loginBtn" onclick="login()">Ingresar</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span>HEXIA</span> Admin</div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <button class="nav-item active" data-section="dashboard"><span class="icon">&#9632;</span><span class="label">Dashboard</span></button>
+      <button class="nav-item" data-section="clients"><span class="icon">&#128101;</span><span class="label">Clientes</span></button>
+      <button class="nav-item" data-section="submissions"><span class="icon">&#128196;</span><span class="label">Submissions</span></button>
+      <button class="nav-item" data-section="tickets"><span class="icon">&#128172;</span><span class="label">Tickets</span></button>
+      <button class="nav-item" data-section="email"><span class="icon">&#9993;</span><span class="label">Email</span></button>
+      <button class="nav-item" data-section="database"><span class="icon">&#128451;</span><span class="label">Base de Datos</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><span class="icon">&#8594;</span><span class="label">Cerrar sesi&oacute;n</span></button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="content-header">
+      <h2 id="sectionTitle">Dashboard</h2>
+      <div class="user-area">
+        <span id="userDisplay">admin</span>
+      </div>
+    </div>
+    <div class="content-body">
+
+      <!-- Dashboard Section -->
+      <div id="section-dashboard" class="section active">
+        <div class="stats" id="dashStats"></div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-header">&Uacute;ltimos Clientes</div>
+            <div class="dash-card-body"><table class="mini-table" id="recentClientsTable"><tbody></tbody></table></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-header">&Uacute;ltimos Tickets</div>
+            <div class="dash-card-body"><table class="mini-table" id="recentTicketsTable"><tbody></tbody></table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clients Section -->
+      <div id="section-clients" class="section">
+        <div class="toolbar">
+          <div class="search-box">
+            <span class="search-icon">&#128270;</span>
+            <input type="text" id="clientsSearch" placeholder="Buscar clientes..." oninput="renderClients()">
+          </div>
+          <select id="clientsFilter" onchange="renderClients()">
+            <option value="">Todos los estados</option>
+            <option value="lead">Lead</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openClientModal()">+ Nuevo Cliente</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Tel&eacute;fono</th><th>Empresa</th><th>Rol</th><th>Industria</th><th>Estado</th><th>Notas</th><th>Fecha</th><th>Acci&oacute;n</th></tr></thead>
+            <tbody id="clientsBody"></tbody>
+          </table>
+        </div>
+        <div id="clientsEmpty" class="empty-state" style="display:none"><h3>No hay clientes</h3></div>
+      </div>
+
+      <!-- Submissions Section -->
+      <div id="section-submissions" class="section">
+        <div class="tabs" id="subTabs">
+          <button class="tab active" data-tab="newsletter" onclick="switchSubTab('newsletter')">Newsletter <span class="count" id="subCountNewsletter">0</span></button>
+          <button class="tab" data-tab="projects" onclick="switchSubTab('projects')">Proyectos <span class="count" id="subCountProjects">0</span></button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead id="subHead"></thead>
+            <tbody id="subBody"></tbody>
+          </table>
+        </div>
+        <div id="subEmpty" class="empty-state" style="display:none"><h3>No hay datos</h3></div>
+      </div>
+
+      <!-- Tickets Section -->
+      <div id="section-tickets" class="section">
+        <div class="toolbar">
+          <div class="search-box">
+            <span class="search-icon">&#128270;</span>
+            <input type="text" id="ticketsSearch" placeholder="Buscar tickets..." oninput="renderTickets()">
+          </div>
+          <select id="ticketsStatusFilter" onchange="renderTickets()">
+            <option value="">Todos los estados</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select id="ticketsPriorityFilter" onchange="renderTickets()">
+            <option value="">Todas las prioridades</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openTicketModal()">+ Nuevo Ticket</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Cliente</th><th>Email</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th>Acci&oacute;n</th></tr></thead>
+            <tbody id="ticketsBody"></tbody>
+          </table>
+        </div>
+        <div id="ticketsEmpty" class="empty-state" style="display:none"><h3>No hay tickets</h3></div>
+        <div id="ticketDetail" class="ticket-detail" style="display:none"></div>
+      </div>
+
+      <!-- Email Section -->
+      <div id="section-email" class="section">
+        <div class="tabs" id="emailTabs">
+          <button class="tab active" data-tab="compose" onclick="switchEmailTab('compose')">Redactar</button>
+          <button class="tab" data-tab="templates" onclick="switchEmailTab('templates')">Plantillas <span class="count" id="templateCount">0</span></button>
+        </div>
+        <div id="emailCompose" class="email-layout">
+          <div class="compose-card">
+            <h3>Nuevo Correo</h3>
+            <div class="form-group">
+              <label>Para (emails separados por coma)</label>
+              <input type="text" id="emailTo" placeholder="cliente@ejemplo.com, otro@ejemplo.com">
+            </div>
+            <div class="form-group">
+              <label>Asunto</label>
+              <input type="text" id="emailSubject" placeholder="Asunto del correo">
+            </div>
+            <div class="form-group">
+              <label>Plantilla (opcional)</label>
+              <select id="emailTemplateSelect" onchange="applyTemplate()">
+                <option value="">Seleccionar plantilla...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Cuerpo</label>
+              <textarea id="emailBody" rows="8" placeholder="Escriba el contenido del correo..."></textarea>
+            </div>
+            <div class="send-result" id="sendResult">
+              <span class="sent" id="sentCount"></span>
+              <span class="failed" id="failedCount"></span>
+            </div>
+            <button class="btn btn-primary" onclick="sendEmail()">Enviar</button>
+          </div>
+          <div class="log-card">
+            <h3>Env&iacute;os Recientes</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Para</th><th>Asunto</th><th>Estado</th><th>Fecha</th></tr></thead>
+                <tbody id="emailLogBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="emailTemplates" style="display:none">
+          <div class="toolbar">
+            <button class="btn btn-primary btn-sm" onclick="openTemplateModal()">+ Nueva Plantilla</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Nombre</th><th>Asunto</th><th>Cuerpo</th><th>Acci&oacute;n</th></tr></thead>
+              <tbody id="templatesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Section -->
+      <div id="section-database" class="section">
+        <div class="db-tables" id="dbTables"></div>
+        <div class="query-area">
+          <h3 style="margin-bottom:8px;font-size:15px;">Consulta SQL</h3>
+          <textarea id="queryInput" placeholder="SELECT * FROM clients LIMIT 10"></textarea>
+          <div class="query-actions">
+            <button class="btn btn-primary btn-sm" onclick="runQuery()">Ejecutar</button>
+            <span class="hint">Solo consultas SELECT</span>
+          </div>
+        </div>
+        <div class="query-result table-wrap" id="queryResult" style="display:none"></div>
+        <div id="queryError" class="empty-state" style="display:none"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal overlay -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '/api';
+let token = localStorage.getItem('hexia_token');
+let currentSection = 'dashboard';
+let subTab = 'newsletter';
+let emailTab = 'compose';
+let allClients = [];
+let allTickets = [];
+let ticketReplies = {};
+let editingClientId = null;
+let editingTemplateId = null;
+let dbInfo = [];
+
+/* ========== UTILITIES ========== */
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+function formatDate(d) {
+  if (!d) return '-';
+  const date = new Date(d + (d.includes('Z') || d.includes('+') ? '' : 'Z'));
+  return date.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function api(path, opts = {}) {
+  const headers = { 'Authorization': 'Bearer ' + token, ...opts.headers };
+  if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.body);
+  }
+  return fetch(API + path, { ...opts, headers })
+    .then(r => {
+      if (r.status === 401) { logout(); return Promise.reject('Unauthorized'); }
+      return r.json().then(d => { if (!d.success && !d.success === undefined) throw new Error(d.error || 'Error'); return d; });
+    });
+}
+function escapeHtml(s) {
+  if (s == null) return '-';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+/* ========== LOGIN / LOGOUT ========== */
+function login() {
+  const user = document.getElementById('loginUser').value;
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  document.getElementById('loginError').style.display = 'none';
+  fetch(API + '/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: user, password: pass })
+  }).then(r => r.json()).then(d => {
+    if (d.success) { token = d.token; localStorage.setItem('hexia_token', token); showApp(); }
+    else { document.getElementById('loginError').style.display = 'block'; }
+  }).catch(() => { document.getElementById('loginError').style.display = 'block'; })
+  .finally(() => { btn.disabled = false; btn.textContent = 'Ingresar'; });
+}
+function logout() {
+  token = null; localStorage.removeItem('hexia_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+}
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadAll();
+}
+
+/* ========== NAVIGATION ========== */
+document.querySelectorAll('.nav-item[data-section]').forEach(el => {
+  el.addEventListener('click', () => switchSection(el.dataset.section));
+});
+function switchSection(section) {
+  currentSection = section;
+  document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.toggle('active', n.dataset.section === section));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'section-' + section));
+  document.getElementById('sectionTitle').textContent = section.charAt(0).toUpperCase() + section.slice(1);
+  if (section === 'dashboard') loadDashboard();
+  else if (section === 'clients') loadClients();
+  else if (section === 'submissions') loadSubmissions();
+  else if (section === 'tickets') loadTickets();
+  else if (section === 'email') loadEmail();
+  else if (section === 'database') loadDatabase();
+}
+
+/* ========== DASHBOARD ========== */
+function loadDashboard() {
+  api('/admin/dashboard').then(d => {
+    const s = d.stats || {};
+    document.getElementById('dashStats').innerHTML = `
+      <div class="stat-card"><div class="num">${s.total_clients || 0}</div><div class="label">Clientes</div></div>
+      <div class="stat-card"><div class="num">${s.total_tickets || 0}</div><div class="label">Tickets</div></div>
+      <div class="stat-card"><div class="num">${s.open_tickets || 0}</div><div class="label">Tickets Abiertos</div></div>
+      <div class="stat-card"><div class="num">${s.total_newsletters || 0}</div><div class="label">Suscriptores</div></div>
+      <div class="stat-card"><div class="num">${s.total_projects || 0}</div><div class="label">Proyectos</div></div>
+    `;
+    const rc = d.recent_clients || [];
+    document.getElementById('recentClientsTable').querySelector('tbody').innerHTML = rc.length
+      ? rc.map(c => `<tr><td>${escapeHtml(c.name)}</td><td class="text-muted">${escapeHtml(c.email)}</td><td><span class="tag tag-${c.status || 'lead'}">${c.status || 'lead'}</span></td></tr>`).join('')
+      : '<tr><td class="text-muted" style="text-align:center" colspan="3">Sin clientes</td></tr>';
+    const rt = d.recent_tickets || [];
+    document.getElementById('recentTicketsTable').querySelector('tbody').innerHTML = rt.length
+      ? rt.map(t => `<tr><td>${escapeHtml(t.client_name)}</td><td class="text-muted">${escapeHtml(t.subject)}</td><td><span class="tag tag-${t.priority || 'low'}">${t.priority || 'low'}</span></td></tr>`).join('')
+      : '<tr><td class="text-muted" style="text-align:center" colspan="3">Sin tickets</td></tr>';
+  }).catch(() => {});
+}
+
+/* ========== CLIENTS ========== */
+function loadClients() {
+  api('/admin/clients').then(d => {
+    allClients = d.clients || d.data || d || [];
+    renderClients();
+  }).catch(() => {});
+}
+function renderClients() {
+  const q = document.getElementById('clientsSearch').value.toLowerCase();
+  const f = document.getElementById('clientsFilter').value;
+  let items = allClients.filter(c => {
+    if (f && c.status !== f) return false;
+    if (q && !(c.name||'').toLowerCase().includes(q) && !(c.email||'').toLowerCase().includes(q) && !(c.company||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const tbody = document.getElementById('clientsBody');
+  const empty = document.getElementById('clientsEmpty');
+  if (!items.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = items.map(c => `<tr>
+    <td>#${c.id}</td>
+    <td><strong>${escapeHtml(c.name)}</strong></td>
+    <td>${escapeHtml(c.email)}</td>
+    <td>${escapeHtml(c.country_code || '')} ${escapeHtml(c.phone || '')}</td>
+    <td>${escapeHtml(c.company || '-')}</td>
+    <td>${escapeHtml(c.role || '-')}</td>
+    <td>${escapeHtml(c.industry || '-')}</td>
+    <td><span class="tag tag-${c.status || 'lead'}">${c.status || 'lead'}</span></td>
+    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(c.notes||'')}">${escapeHtml(c.notes||'-')}</td>
+    <td class="text-muted">${formatDate(c.created_at)}</td>
+    <td>
+      <button class="btn btn-secondary btn-sm" onclick="openClientModal(${c.id})">&#9998;</button>
+      <button class="btn btn-danger" onclick="deleteClient(${c.id})">&#128465;</button>
+    </td>
+  </tr>`).join('');
+}
+function openClientModal(id) {
+  const client = id ? allClients.find(c => c.id === id) : null;
+  editingClientId = id || null;
+  openModal(`
+    <h3>${client ? 'Editar' : 'Nuevo'} Cliente</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre</label><input type="text" id="cf_name" value="${escapeHtml(client?.name||'')}"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="cf_email" value="${escapeHtml(client?.email||'')}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tel&eacute;fono</label><input type="text" id="cf_phone" value="${escapeHtml(client?.phone||'')}"></div>
+      <div class="form-group"><label>C&oacute;digo Pa&iacute;s</label><input type="text" id="cf_country_code" value="${escapeHtml(client?.country_code||'')}" placeholder="+1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Empresa</label><input type="text" id="cf_company" value="${escapeHtml(client?.company||'')}"></div>
+      <div class="form-group"><label>Rol</label><input type="text" id="cf_role" value="${escapeHtml(client?.role||'')}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Industria</label><input type="text" id="cf_industry" value="${escapeHtml(client?.industry||'')}"></div>
+      <div class="form-group"><label>Estado</label><select id="cf_status"><option value="lead" ${(client?.status||'lead')==='lead'?'selected':''}>Lead</option><option value="active" ${client?.status==='active'?'selected':''}>Active</option><option value="inactive" ${client?.status==='inactive'?'selected':''}>Inactive</option></select></div>
+    </div>
+    <div class="form-group"><label>Notas</label><textarea id="cf_notes" rows="3">${escapeHtml(client?.notes||'')}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClient()">${client ? 'Guardar' : 'Crear'}</button>
+    </div>
+  `);
+}
+function saveClient() {
+  const body = {
+    name: document.getElementById('cf_name').value,
+    email: document.getElementById('cf_email').value,
+    phone: document.getElementById('cf_phone').value,
+    country_code: document.getElementById('cf_country_code').value,
+    company: document.getElementById('cf_company').value,
+    role: document.getElementById('cf_role').value,
+    industry: document.getElementById('cf_industry').value,
+    status: document.getElementById('cf_status').value,
+    notes: document.getElementById('cf_notes').value,
+  };
+  const method = editingClientId ? 'PUT' : 'POST';
+  const url = editingClientId ? `/admin/clients/${editingClientId}` : '/admin/clients';
+  api(url, { method, body }).then(() => {
+    showToast(editingClientId ? 'Cliente actualizado' : 'Cliente creado', 'success');
+    closeModal(); loadClients();
+  }).catch(e => showToast('Error: ' + e.message, 'error'));
+}
+function deleteClient(id) {
+  if (!confirm('Eliminar cliente #' + id + '?')) return;
+  api('/admin/clients/' + id, { method: 'DELETE' }).then(() => {
+    showToast('Cliente eliminado', 'success'); loadClients();
+  }).catch(e => showToast('Error: ' + e.message, 'error'));
+}
+
+/* ========== SUBMISSIONS ========== */
+let subData = { newsletters: [], projects: [] };
+function loadSubmissions() {
+  api('/admin/submissions').then(d => {
+    subData = d;
+    document.getElementById('subCountNewsletter').textContent = (d.newsletters||[]).length;
+    document.getElementById('subCountProjects').textContent = (d.projects||[]).length;
+    renderSubmissions();
+  }).catch(() => {});
+}
+function switchSubTab(tab) {
+  subTab = tab;
+  document.querySelectorAll('#subTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderSubmissions();
+}
+function renderSubmissions() {
+  const showNewsletter = subTab === 'newsletter';
+  const items = showNewsletter ? (subData.newsletters||[]).map(i=>({...i,_t:'newsletter'})) : (subData.projects||[]).map(i=>({...i,_t:'project'}));
+  items.sort((a,b) => new Date((b.created_at||'')+'Z') - new Date((a.created_at||'')+'Z'));
+  const thead = document.getElementById('subHead');
+  const tbody = document.getElementById('subBody');
+  const empty = document.getElementById('subEmpty');
+  if (!items.length) { thead.innerHTML = ''; tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  if (subTab === 'newsletter') {
+    thead.innerHTML = '<tr><th>ID</th><th>Email</th><th>Fecha</th><th>Acci&oacute;n</th></tr>';
+    tbody.innerHTML = items.map(i => `<tr>
+      <td>#${i.id}</td><td>${escapeHtml(i.email)}</td><td class="text-muted">${formatDate(i.created_at)}</td>
+      <td><button class="btn btn-danger" onclick="deleteSub('newsletter',${i.id})">Eliminar</button></td>
+    </tr>`).join('');
+  } else {
+    thead.innerHTML = '<tr><th>ID</th><th>Nombre</th><th>Email</th><th>Tel&eacute;fono</th><th>Empresa</th><th>Industria</th><th>Proyecto</th><th>Detalles</th><th>Doc.</th><th>NDA</th><th>Presupuesto</th><th>Fecha</th><th>Acci&oacute;n</th></tr>';
+    tbody.innerHTML = items.map(i => `<tr>
+      <td>#${i.id}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.email)}</td>
+      <td>${escapeHtml(i.country_code||'')} ${escapeHtml(i.phone||'')}</td>
+      <td>${escapeHtml(i.company||'-')}</td><td>${escapeHtml(i.industry||'-')}</td>
+      <td>${escapeHtml(i.project_type||'-')}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(i.project_details||'')}">${escapeHtml(i.project_details||'-')}</td>
+      <td>${(()=>{try{return JSON.parse(i.documents||'[]').join(', ')||'-'}catch{return '-'}})()}</td>
+      <td>${i.nda?'S&iacute;':'No'}</td>
+      <td>${escapeHtml(i.budget||'-')}</td>
+      <td class="text-muted">${formatDate(i.created_at)}</td>
+      <td><button class="btn btn-danger" onclick="deleteSub('projects',${i.id})">Eliminar</button></td>
+    </tr>`).join('');
+  }
+}
+function deleteSub(type, id) {
+  if (!confirm('Eliminar esta submission?')) return;
+  api('/admin/submissions/' + type + '/' + id, { method: 'DELETE' }).then(() => {
+    showToast('Eliminado', 'success'); loadSubmissions();
+  }).catch(e => showToast('Error: ' + e.message, 'error'));
+}
+
+/* ========== TICKETS ========== */
+function loadTickets() {
+  api('/admin/tickets').then(d => {
+    allTickets = d.tickets || d.data || d || [];
+    renderTickets();
+  }).catch(() => {});
+}
+function renderTickets() {
+  const q = document.getElementById('ticketsSearch').value.toLowerCase();
+  const sf = document.getElementById('ticketsStatusFilter').value;
+  const pf = document.getElementById('ticketsPriorityFilter').value;
+  let items = allTickets.filter(t => {
+    if (sf && t.status !== sf) return false;
+    if (pf && t.priority !== pf) return false;
+    if (q && !(t.client_name||'').toLowerCase().includes(q) && !(t.client_email||'').toLowerCase().includes(q) && !(t.subject||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const tbody = document.getElementById('ticketsBody');
+  const empty = document.getElementById('ticketsEmpty');
+  document.getElementById('ticketDetail').style.display = 'none';
+  if (!items.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = items.map(t => `<tr class="clickable" onclick="showTicketDetail(${t.id})">
+    <td>#${t.id}</td>
+    <td>${escapeHtml(t.client_name)}</td>
+    <td>${escapeHtml(t.client_email)}</td>
+    <td>${escapeHtml(t.subject)}</td>
+    <td><span class="tag tag-${t.priority||'low'}">${t.priority||'low'}</span></td>
+    <td><span class="tag tag-${t.status||'open'}">${(t.status||'open').replace('_',' ')}</span></td>
+    <td class="text-muted">${formatDate(t.created_at)}</td>
+    <td>
+      <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openTicketModal(${t.id})">&#9998;</button>
+      <button class="btn btn-danger" onclick="event.stopPropagation();deleteTicket(${t.id})">&#128465;</button>
+    </td>
+  </tr>`).join('');
+}
+function showTicketDetail(id) {
+  const ticket = allTickets.find(t => t.id === id);
+  if (!ticket) return;
+  const detail = document.getElementById('ticketDetail');
+  detail.style.display = 'block';
+  detail.innerHTML = `<div class="ticket-detail-header">
+    <strong>#${ticket.id} - ${escapeHtml(ticket.subject)}</strong>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ticketDetail').style.display='none'">Cerrar</button>
+  </div>
+  <div class="ticket-detail-body">
+    <div class="field"><span class="label">Cliente</span><div class="value">${escapeHtml(ticket.client_name)} (${escapeHtml(ticket.client_email)})</div></div>
+    <div class="field"><span class="label">Mensaje</span><div class="value">${escapeHtml(ticket.message||ticket.description||'')}</div></div>
+    <div class="field"><span class="label">Prioridad</span><div class="value"><span class="tag tag-${ticket.priority||'low'}">${ticket.priority||'low'}</span></div></div>
+    <div class="field"><span class="label">Estado</span><div class="value"><span class="tag tag-${ticket.status||'open'}">${(ticket.status||'open').replace('_',' ')}</span></div></div>
+    <hr style="border-color:var(--border);margin:16px 0">
+    <div id="repliesContainer"><strong>Respuestas</strong><div id="repliesList"></div></div>
+    <div class="reply-form">
+      <textarea id="replyText" placeholder="Escribir respuesta..." rows="3"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="sendReply(${id})">Responder</button>
+      </div>
+    </div>
+  </div>`;
+  loadReplies(id);
+}
+function loadReplies(ticketId) {
+  api('/admin/tickets/' + ticketId + '/replies').then(d => {
+    const replies = d.replies || d.data || d || [];
+    const list = document.getElementById('repliesList');
+    if (!replies.length) { list.innerHTML = '<div class="text-muted" style="padding:8px 0">Sin respuestas</div>'; return; }
+    list.innerHTML = replies.map(r => `<div class="reply-item">
+      <div class="meta">${escapeHtml(r.author||'Admin')} - ${formatDate(r.created_at)}</div>
+      <div class="text">${escapeHtml(r.message||r.body||'')}</div>
+    </div>`).join('');
+  }).catch(() => {});
+}
+function sendReply(ticketId) {
+  const text = document.getElementById('replyText').value.trim();
+  if (!text) return;
+  api('/admin/tickets/' + ticketId + '/replies', { method: 'POST', body: { message: text, author: 'Admin' } }).then(() => {
+    showToast('Respuesta enviada', 'success');
+    document.getElementById('replyText').value = '';
+    loadReplies(ticketId);
+  }).catch(e => showToast('Error: ' + e.message, 'error'));
+}
+function openTicketModal(id) {
+  const t = id ? allTickets.find(x => x.id === id) : null;
+  openModal(`
+    <h3>${t ? 'Editar' : 'Nuevo'} Ticket</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Cliente</label><input type="text" id="tf_name" value="${escapeHtml(t?.client_name||'')}"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="tf_email" value="${escapeHtml(t?.client_email||'')}"></div>
+    </div>
+    <div class="form-group"><label>Asunto</label><input type="text" id="tf_subject" value="${escapeHtml(t?.subject||'')}"></div>
+    <div class="form-group"><label>Mensaje</label><textarea id="tf_message" rows="3">${escapeHtml(t?.message||t?.description||'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Prioridad</label><select id="tf_priority"><option value="low" ${(t?.priority||'low')==='low'?'selected':''}>Low</option><option value="medium" ${t?.priority==='medium'?'selected':''}>Medium</option><option value="high" ${t?.priority==='high'?'selected':''}>High</option><option value="critical" ${t?.priority==='critical'?'selected':''}>Critical</option></select></div>
+      <div class="form-group"><label>Estado</label><select id="tf_status"><option value="open" ${(t?.status||'open')==='open'?'selected':''}>Open</option><option value="in_progress" ${t?.status==='in_progress'?'selected':''}>In Progress</option><option value="resolved" ${t?.status==='resolved'?'selected':''}>Resolved</option><option value="closed" ${t?.status==='closed'?'selected':''}>Closed</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTicket(${id||''})">${t ? 'Guardar' : 'Crear'}</button>
+    </div>
+  `);
+}
+function saveTicket(id) {
+  const body = {
+    client_name: document.getElementById('tf_name').value,
+    client_email: document.getElementById('tf_email').value,
+    subject: document.getElementById('tf_subject').value,
+    message: document.getElementById('tf_message').value,
+    priority: document.getElementById('tf_priority').value,
+    status: document.getElementById('tf_status').value,
+  };
+  if (!id) {
+    api('/tickets', { method: 'POST', body }).then(() => {
+      showToast('Ticket creado', 'success'); closeModal(); loadTickets();
+    }).catch(e => showToast('Error: ' + e.message, 'error'));
+  } else {
+    api('/admin/tickets/' + id, { method: 'PUT', body }).then(() => {
+      showToast('Ticket actualizado', 'success'); closeModal(); loadTickets();
+    }).catch(e => showToast('Error: ' + e.message, 'error'));
+  }
+}
+function deleteTicket(id) {
+  if (!confirm('Eliminar ticket #' + id + '?')) return;
+  api('/admin/tickets/' + id, { method: 'DELETE' }).then(() => {
+    showToast('Ticket eliminado', 'success'); loadTickets();
+  }).catch(e => showToast('Error: ' + e.message, 'error'));
+}
+
+/* ========== EMAIL ========== */
+function loadEmail() {
+  loadTemplates();
+  loadEmailLog();
+}
+function switchEmailTab(tab) {
+  emailTab = tab;
+  document.querySelectorAll('#emailTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('emailCompose').style.display = tab === 'compose' ? 'grid' : 'none';
+  document.getElementById('emailTemplates').style.display = tab === 'templates' ? 'block' : 'none';
+}
+function loadTemplates() {
+  api('/admin/templates').then(d => {
+    const templates = d.templates || d.data || d || [];
+    document.getElementById('templateCount').textContent = templates.length;
+    const sel = document.getElementById('emailTemplateSelect');
+    sel.innerHTML = '<option value="">Seleccionar plantilla...</option>' + templates.map(t => `<option value="${t.id}" data-subject="${escapeHtml(t.subject||'')}" data-body="${escapeHtml(t.body||'')}">${escapeHtml(t.name)}</option>`).join('');
+    const tbody = document.getElementById('templatesBody');
+    tbody.innerHTML = templates.map(t => `<tr>
+      <td>#${t.id}</td>
+      <td>${escapeHtml(t.name)}</td>
+      <td>${escapeHtml(t.subject)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.body||'')}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openTemplateModal(${t.id})">&#9998;</button>
+        <button class="btn btn-danger" onclick="deleteTemplate(${t.id})">&#128465;</button>
+      </td>
+    </tr>`).join('');
+  }).catch(() => {});
+}
+function loadEmailLog() {
+  api('/admin/email/log').then(d => {
+    const logs = d.logs || d.data || d || [];
+    document.getElementById('emailLogBody').innerHTML = logs.length
+      ? logs.map(l => `<tr><td>#${l.id}</td><td>${escapeHtml(l.recipient||l.to||'')}</td><td>${escapeHtml(l.subject||'')}</td><td><span class="tag ${l.status==='sent'?'tag-active':'tag-inactive'}">${l.status||'-'}</span></td><td class="text-muted">${formatDate(l.created_at||l.sent_at)}</td></tr>`).join('')
+      : '<tr><td class="text-muted" style="text-align:center" colspan="5">Sin env&iacute;os</td></tr>';
+  }).catch(() => {});
+}
+function applyTemplate() {
+  const sel = document.getElementById('emailTemplateSelect');
+  const opt = sel.selectedOptions[0];
+  if (opt && opt.value) {
+    document.getElementById('emailSubject').value = opt.dataset.subject || '';
+    document.getElementById('emailBody').value = opt.dataset.body || '';
+  }
+}
+function sendEmail() {
+  const to = document.getElementById('emailTo').value.trim();
+  const subject = document.getElementById('emailSubject').value.trim();
+  const body = document.getElementById('emailBody').value.trim();
+  if (!to || !subject || !body) { showToast('Complete todos los campos', 'error'); return; }
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  document.getElementById('sendResult').style.display = 'none';
+  api('/admin/email/send', { method: 'POST', body: { to: to.split(',').map(s=>s.trim()).filter(Boolean), subject, body } }).then(d => {
+    document.getElementById('sendResult').style.display = 'block';
+    document.getElementById('sentCount').textContent = 'Enviados: ' + (d.sent || 0);
+    document.getElementById('failedCount').textContent = 'Fallidos: ' + (d.failed || 0);
+    showToast('Correo enviado', 'success');
+    loadEmailLog();
+  }).catch(e => showToast('Error: ' + e.message, 'error'))
+  .finally(() => { btn.disabled = false; btn.textContent = 'Enviar'; });
+}
+function openTemplateModal(id) {
+  const templates = [];
+  api('/admin/templates').then(d => {
+    const list = d.templates || d.data || d || [];
+    const t = id ? list.find(x => x.id === id) : null;
+    editingTemplateId = id || null;
+    openModal(`
+      <h3>${t ? 'Editar' : 'Nueva'} Plantilla</h3>
+      <div class="form-group"><label>Nombre</label><input type="text" id="tpl_name" value="${escapeHtml(t?.name||'')}"></div>
+      <div class="form-group"><label>Asunto</label><input type="text" id="tpl_subject" value="${escapeHtml(t?.subject||'')}"></div>
+      <div class="form-group"><label>Cuerpo</label><textarea id="tpl_body" rows="5">${escapeHtml(t?.body||'')}</textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveTemplate()">${t ? 'Guardar' : 'Crear'}</button>
+      </div>
+    `);
+  }).catch(() => {});
+}
+function saveTemplate() {
+  const body = {
+    name: document.getElementById('tpl_name').value,
+    subject: document.getElementById('tpl_subject').value,
+    body: document.getElementById('tpl_body').value,
+  };
+  if (editingTemplateId) {
+    api('/admin/templates/' + editingTemplateId, { method: 'PUT', body }).then(() => {
+      showToast('Plantilla actualizada', 'success'); closeModal(); loadTemplates();
+    }).catch(e => showToast('Error: ' + e.message, 'error'));
+  } else {
+    api('/admin/templates', { method: 'POST', body }).then(() => {
+      showToast('Plantilla creada', 'success'); closeModal(); loadTemplates();
+    }).catch(e => showToast('Error: ' + e.message, 'error'));
+  }
+}
+function deleteTemplate(id) {
+  if (!confirm('Eliminar plantilla #' + id + '?')) return;
+  api('/admin/templates/' + id, { method: 'DELETE' }).then(() => {
+    showToast('Plantilla eliminada', 'success'); loadTemplates();
+  }).catch(e => showToast('Error: ' + e.message, 'error'));
+}
+
+/* ========== DATABASE ========== */
+function loadDatabase() {
+  api('/admin/db-info').then(d => {
+    dbInfo = d.tables || d.data || d || [];
+    const container = document.getElementById('dbTables');
+    container.innerHTML = dbInfo.map(t => `<div class="db-card" onclick="fillQuery('${escapeHtml(t.name)}')">
+      <div class="db-name">${escapeHtml(t.name)}</div>
+      <div class="db-count">${t.row_count || 0} filas</div>
+      <div class="db-cols">${(t.columns||[]).map(c => '<span>' + escapeHtml(c) + '</span>').join(' ')}</div>
+    </div>`).join('');
+  }).catch(() => {});
+}
+function fillQuery(table) {
+  document.getElementById('queryInput').value = 'SELECT * FROM ' + table + ' LIMIT 50';
+  runQuery();
+}
+function runQuery() {
+  const q = document.getElementById('queryInput').value.trim();
+  if (!q || !/^\s*SELECT/i.test(q)) { showToast('Solo consultas SELECT', 'error'); return; }
+  const resultDiv = document.getElementById('queryResult');
+  const errorDiv = document.getElementById('queryError');
+  resultDiv.style.display = 'none'; errorDiv.style.display = 'none';
+  api('/admin/db-query', { method: 'POST', body: { query: q } }).then(d => {
+    const rows = d.rows || d.data || d || [];
+    if (!rows.length) { errorDiv.innerHTML = '<h3>Sin resultados</h3>'; errorDiv.style.display = 'block'; return; }
+    const cols = Object.keys(rows[0]);
+    resultDiv.innerHTML = '<table><thead><tr>' + cols.map(c => '<th>' + escapeHtml(c) + '</th>').join('') + '</tr></thead><tbody>' +
+      rows.map(r => '<tr>' + cols.map(c => '<td>' + escapeHtml(r[c]) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+    resultDiv.style.display = 'block';
+  }).catch(e => {
+    errorDiv.innerHTML = '<h3>Error</h3><p>' + escapeHtml(e.message||'Error en la consulta') + '</p>';
+    errorDiv.style.display = 'block';
+  });
+}
+
+/* ========== INIT ========== */
+function loadAll() {
+  loadDashboard();
+  loadClients();
+  loadSubmissions();
+  loadTickets();
+  loadEmail();
+  loadDatabase();
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+
+if (token) showApp();
+</script>
+</body>
+</html>

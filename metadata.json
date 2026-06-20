@@ -1,0 +1,6 @@
+{
+  "name": "HEXIA Landing Page",
+  "description": "Sistema de Facturación Inteligente y POS para comercios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
