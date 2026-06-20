@@ -1,33 +1,57 @@
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'fs';
-import { dirname, resolve } from 'path';
+import { createClient } from '@libsql/client';
 
-const DB_PATH = process.env.DATABASE_PATH || './data.db';
+let client;
+let schemaPromise;
 
-let db;
-
-export function getDb() {
-  if (!db) {
-    const dir = dirname(resolve(DB_PATH));
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    initSchema();
+function fixRow(row) {
+  if (!row) return row;
+  const r = {};
+  for (const [k, v] of Object.entries(row)) {
+    r[k] = typeof v === 'bigint' ? Number(v) : v;
   }
-  return db;
+  return r;
 }
 
-function initSchema() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS newsletter_submissions (
+function fixRows(rows) {
+  return rows.map(fixRow);
+}
+
+export async function getDb() {
+  if (!client) {
+    client = createClient({
+      url: process.env.TURSO_DB_URL || 'file:./data.db',
+      authToken: process.env.TURSO_DB_TOKEN,
+    });
+    schemaPromise = initSchema();
+  }
+  await schemaPromise;
+  return {
+    all: async (sql, ...params) => {
+      const rs = await client.execute({ sql, args: params, format: 'object' });
+      return fixRows(rs.rows);
+    },
+    get: async (sql, ...params) => {
+      const rs = await client.execute({ sql, args: params, format: 'object' });
+      return fixRow(rs.rows[0]);
+    },
+    run: async (sql, ...params) => {
+      const rs = await client.execute({ sql, args: params });
+      return { changes: rs.rowsAffected, lastInsertRowid: Number(rs.lastInsertRowid) };
+    },
+    exec: async (sql) => {
+      await client.execute(sql);
+    },
+  };
+}
+
+async function initSchema() {
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS newsletter_submissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS project_submissions (
+    )`,
+    `CREATE TABLE IF NOT EXISTS project_submissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
@@ -42,9 +66,8 @@ function initSchema() {
       nda INTEGER DEFAULT 0,
       budget TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS clients (
+    )`,
+    `CREATE TABLE IF NOT EXISTS clients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
@@ -58,9 +81,8 @@ function initSchema() {
       source TEXT DEFAULT 'web',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS support_tickets (
+    )`,
+    `CREATE TABLE IF NOT EXISTS support_tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       client_name TEXT NOT NULL,
       client_email TEXT NOT NULL,
@@ -73,9 +95,8 @@ function initSchema() {
       assigned_to TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS ticket_replies (
+    )`,
+    `CREATE TABLE IF NOT EXISTS ticket_replies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ticket_id INTEGER NOT NULL,
       author TEXT NOT NULL,
@@ -83,24 +104,25 @@ function initSchema() {
       is_staff INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (ticket_id) REFERENCES support_tickets(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS email_templates (
+    )`,
+    `CREATE TABLE IF NOT EXISTS email_templates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       subject TEXT NOT NULL,
       body TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS email_log (
+    )`,
+    `CREATE TABLE IF NOT EXISTS email_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER,
       recipient TEXT NOT NULL,
       subject TEXT NOT NULL,
       status TEXT DEFAULT 'sent',
       created_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
+    )`,
+  ];
+  for (const sql of tables) {
+    await client.execute(sql);
+  }
 }

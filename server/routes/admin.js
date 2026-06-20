@@ -31,34 +31,36 @@ router.post('/login', (req, res) => {
   res.status(401).json({ error: 'Credenciales inválidas' });
 });
 
-router.get('/submissions', authMiddleware, (req, res) => {
-  const db = getDb();
-  const newsletters = db.prepare('SELECT * FROM newsletter_submissions ORDER BY created_at DESC').all();
-  const projects = db.prepare('SELECT * FROM project_submissions ORDER BY created_at DESC').all();
+router.get('/submissions', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  const newsletters = await db.all('SELECT * FROM newsletter_submissions ORDER BY created_at DESC');
+  const projects = await db.all('SELECT * FROM project_submissions ORDER BY created_at DESC');
   res.json({ newsletters, projects });
 });
 
-router.delete('/submissions/newsletter/:id', authMiddleware, (req, res) => {
-  const db = getDb();
-  db.prepare('DELETE FROM newsletter_submissions WHERE id = ?').run(req.params.id);
+router.delete('/submissions/newsletter/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  await db.run('DELETE FROM newsletter_submissions WHERE id = ?', req.params.id);
   res.json({ success: true });
 });
 
-router.delete('/submissions/projects/:id', authMiddleware, (req, res) => {
-  const db = getDb();
-  db.prepare('DELETE FROM project_submissions WHERE id = ?').run(req.params.id);
+router.delete('/submissions/projects/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  await db.run('DELETE FROM project_submissions WHERE id = ?', req.params.id);
   res.json({ success: true });
 });
 
-router.get('/dashboard', authMiddleware, (req, res) => {
-  const db = getDb();
-  const clientCount = db.prepare('SELECT COUNT(*) as c FROM clients').get();
-  const ticketCount = db.prepare('SELECT COUNT(*) as c FROM support_tickets').get();
-  const openTickets = db.prepare("SELECT COUNT(*) as c FROM support_tickets WHERE status = 'open'").get();
-  const newsletterCount = db.prepare('SELECT COUNT(*) as c FROM newsletter_submissions').get();
-  const projectCount = db.prepare('SELECT COUNT(*) as c FROM project_submissions').get();
-  const recentTickets = db.prepare('SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT 5').all();
-  const recentClients = db.prepare('SELECT * FROM clients ORDER BY created_at DESC LIMIT 5').all();
+router.get('/dashboard', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  const [clientCount, ticketCount, openTickets, newsletterCount, projectCount, recentTickets, recentClients] = await Promise.all([
+    db.get('SELECT COUNT(*) as c FROM clients'),
+    db.get('SELECT COUNT(*) as c FROM support_tickets'),
+    db.get("SELECT COUNT(*) as c FROM support_tickets WHERE status = 'open'"),
+    db.get('SELECT COUNT(*) as c FROM newsletter_submissions'),
+    db.get('SELECT COUNT(*) as c FROM project_submissions'),
+    db.all('SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT 5'),
+    db.all('SELECT * FROM clients ORDER BY created_at DESC LIMIT 5'),
+  ]);
   res.json({
     clients: clientCount.c,
     tickets: ticketCount.c,
@@ -70,8 +72,8 @@ router.get('/dashboard', authMiddleware, (req, res) => {
   });
 });
 
-router.get('/clients', authMiddleware, (req, res) => {
-  const db = getDb();
+router.get('/clients', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { search, status } = req.query;
   let query = 'SELECT * FROM clients';
   const params = [];
@@ -80,33 +82,38 @@ router.get('/clients', authMiddleware, (req, res) => {
   if (status) { where.push('status = ?'); params.push(status); }
   if (where.length) query += ' WHERE ' + where.join(' AND ');
   query += ' ORDER BY created_at DESC';
-  res.json(db.prepare(query).all(...params));
+  res.json(await db.all(query, ...params));
 });
 
-router.post('/clients', authMiddleware, (req, res) => {
-  const db = getDb();
+router.post('/clients', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { name, email, phone, country_code, company, role, industry, notes, status, source } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'Nombre y email requeridos' });
-  const stmt = db.prepare(`INSERT INTO clients (name, email, phone, country_code, company, role, industry, notes, status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const result = stmt.run(name, email, phone || '', country_code || '', company || '', role || '', industry || '', notes || '', status || 'lead', source || 'manual');
+  const result = await db.run(
+    'INSERT INTO clients (name, email, phone, country_code, company, role, industry, notes, status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    name, email, phone || '', country_code || '', company || '', role || '', industry || '', notes || '', status || 'lead', source || 'manual'
+  );
   res.json({ success: true, id: result.lastInsertRowid });
 });
 
-router.put('/clients/:id', authMiddleware, (req, res) => {
-  const db = getDb();
+router.put('/clients/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { name, email, phone, country_code, company, role, industry, notes, status } = req.body;
-  db.prepare(`UPDATE clients SET name=?, email=?, phone=?, country_code=?, company=?, role=?, industry=?, notes=?, status=?, updated_at=datetime('now') WHERE id=?`)
-    .run(name, email, phone||'', country_code||'', company||'', role||'', industry||'', notes||'', status||'lead', req.params.id);
+  await db.run(
+    "UPDATE clients SET name=?, email=?, phone=?, country_code=?, company=?, role=?, industry=?, notes=?, status=?, updated_at=datetime('now') WHERE id=?",
+    name, email, phone||'', country_code||'', company||'', role||'', industry||'', notes||'', status||'lead', req.params.id
+  );
   res.json({ success: true });
 });
 
-router.delete('/clients/:id', authMiddleware, (req, res) => {
-  getDb().prepare('DELETE FROM clients WHERE id = ?').run(req.params.id);
+router.delete('/clients/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  await db.run('DELETE FROM clients WHERE id = ?', req.params.id);
   res.json({ success: true });
 });
 
-router.get('/tickets', authMiddleware, (req, res) => {
-  const db = getDb();
+router.get('/tickets', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { search, status, priority } = req.query;
   let query = 'SELECT * FROM support_tickets';
   const params = [];
@@ -116,11 +123,11 @@ router.get('/tickets', authMiddleware, (req, res) => {
   if (priority) { where.push('priority = ?'); params.push(priority); }
   if (where.length) query += ' WHERE ' + where.join(' AND ');
   query += ' ORDER BY created_at DESC';
-  res.json(db.prepare(query).all(...params));
+  res.json(await db.all(query, ...params));
 });
 
-router.put('/tickets/:id', authMiddleware, (req, res) => {
-  const db = getDb();
+router.put('/tickets/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { status, priority, assigned_to } = req.body;
   const updates = [];
   const params = [];
@@ -130,54 +137,56 @@ router.put('/tickets/:id', authMiddleware, (req, res) => {
   if (updates.length) {
     updates.push("updated_at = datetime('now')");
     params.push(req.params.id);
-    db.prepare(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id=?`).run(...params);
+    await db.run(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id=?`, ...params);
   }
   res.json({ success: true });
 });
 
-router.delete('/tickets/:id', authMiddleware, (req, res) => {
-  const db = getDb();
-  db.prepare('DELETE FROM ticket_replies WHERE ticket_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM support_tickets WHERE id = ?').run(req.params.id);
+router.delete('/tickets/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  await db.run('DELETE FROM ticket_replies WHERE ticket_id = ?', req.params.id);
+  await db.run('DELETE FROM support_tickets WHERE id = ?', req.params.id);
   res.json({ success: true });
 });
 
-router.get('/tickets/:id', authMiddleware, (req, res) => {
-  const db = getDb();
-  const ticket = db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(req.params.id);
+router.get('/tickets/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  const ticket = await db.get('SELECT * FROM support_tickets WHERE id = ?', req.params.id);
   if (!ticket) return res.status(404).json({ error: 'Ticket no encontrado' });
-  ticket.replies = db.prepare('SELECT * FROM ticket_replies WHERE ticket_id = ? ORDER BY created_at ASC').all(req.params.id);
+  ticket.replies = await db.all('SELECT * FROM ticket_replies WHERE ticket_id = ? ORDER BY created_at ASC', req.params.id);
   res.json(ticket);
 });
 
-router.post('/tickets/:id/reply', authMiddleware, (req, res) => {
-  const db = getDb();
+router.post('/tickets/:id/reply', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { body } = req.body;
   if (!body) return res.status(400).json({ error: 'Body requerido' });
-  db.prepare('INSERT INTO ticket_replies (ticket_id, author, body, is_staff) VALUES (?, ?, ?, 1)').run(req.params.id, 'admin', body);
-  db.prepare("UPDATE support_tickets SET status='open', updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  await db.run('INSERT INTO ticket_replies (ticket_id, author, body, is_staff) VALUES (?, ?, ?, 1)', req.params.id, 'admin', body);
+  await db.run("UPDATE support_tickets SET status='open', updated_at=datetime('now') WHERE id=?", req.params.id);
   res.json({ success: true });
 });
 
-router.get('/templates', authMiddleware, (req, res) => {
-  res.json(getDb().prepare('SELECT * FROM email_templates ORDER BY created_at DESC').all());
+router.get('/templates', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  res.json(await db.all('SELECT * FROM email_templates ORDER BY created_at DESC'));
 });
 
-router.post('/templates', authMiddleware, (req, res) => {
-  const db = getDb();
+router.post('/templates', authMiddleware, async (req, res) => {
+  const db = await getDb();
   const { name, subject, body } = req.body;
   if (!name || !subject || !body) return res.status(400).json({ error: 'Nombre, asunto y body requeridos' });
-  const existing = db.prepare('SELECT id FROM email_templates WHERE name = ?').get(name);
+  const existing = await db.get('SELECT id FROM email_templates WHERE name = ?', name);
   if (existing) {
-    db.prepare("UPDATE email_templates SET subject=?, body=?, updated_at=datetime('now') WHERE id=?").run(subject, body, existing.id);
+    await db.run("UPDATE email_templates SET subject=?, body=?, updated_at=datetime('now') WHERE id=?", subject, body, existing.id);
     return res.json({ success: true, id: existing.id });
   }
-  const result = db.prepare('INSERT INTO email_templates (name, subject, body) VALUES (?, ?, ?)').run(name, subject, body);
+  const result = await db.run('INSERT INTO email_templates (name, subject, body) VALUES (?, ?, ?)', name, subject, body);
   res.json({ success: true, id: result.lastInsertRowid });
 });
 
-router.delete('/templates/:id', authMiddleware, (req, res) => {
-  getDb().prepare('DELETE FROM email_templates WHERE id = ?').run(req.params.id);
+router.delete('/templates/:id', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  await db.run('DELETE FROM email_templates WHERE id = ?', req.params.id);
   res.json({ success: true });
 });
 
@@ -185,45 +194,47 @@ router.post('/email/send', authMiddleware, async (req, res) => {
   const { sendEmail } = await import('../email.js');
   const { to, subject, body, template_id } = req.body;
   if (!to || !subject || !body) return res.status(400).json({ error: 'Destinatarios, asunto y body requeridos' });
-  const db = getDb();
+  const db = await getDb();
   const recipients = Array.isArray(to) ? to : [to];
   let sent = 0, failed = 0;
   for (const recipient of recipients) {
     const ok = await sendEmail(recipient, subject, body);
     if (ok) {
-      db.prepare('INSERT INTO email_log (template_id, recipient, subject, status) VALUES (?, ?, ?, ?)').run(template_id || null, recipient, subject, 'sent');
+      await db.run('INSERT INTO email_log (template_id, recipient, subject, status) VALUES (?, ?, ?, ?)', template_id || null, recipient, subject, 'sent');
       sent++;
     } else {
-      db.prepare('INSERT INTO email_log (template_id, recipient, subject, status) VALUES (?, ?, ?, ?)').run(template_id || null, recipient, subject, 'failed');
+      await db.run('INSERT INTO email_log (template_id, recipient, subject, status) VALUES (?, ?, ?, ?)', template_id || null, recipient, subject, 'failed');
       failed++;
     }
   }
   res.json({ success: true, sent, failed });
 });
 
-router.get('/email/log', authMiddleware, (req, res) => {
-  res.json(getDb().prepare('SELECT * FROM email_log ORDER BY created_at DESC LIMIT 100').all());
+router.get('/email/log', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  res.json(await db.all('SELECT * FROM email_log ORDER BY created_at DESC LIMIT 100'));
 });
 
-router.get('/db-info', authMiddleware, (req, res) => {
-  const db = getDb();
-  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+router.get('/db-info', authMiddleware, async (req, res) => {
+  const db = await getDb();
+  const tables = await db.all("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
   const info = {};
   for (const { name } of tables) {
-    const cols = db.prepare(`PRAGMA table_info(${name})`).all();
-    const count = db.prepare(`SELECT COUNT(*) as c FROM ${name}`).get();
-    info[name] = { columns: cols, count: count.c };
+    const cols = await db.all(`PRAGMA table_info(${name})`);
+    const row = await db.get(`SELECT COUNT(*) as c FROM ${name}`);
+    info[name] = { columns: cols, count: row.c };
   }
   res.json(info);
 });
 
-router.post('/db-query', authMiddleware, (req, res) => {
+router.post('/db-query', authMiddleware, async (req, res) => {
   const { query } = req.body;
   if (!query || /drop|alter|create|insert|update|delete/i.test(query.trim()) && !query.trim().toLowerCase().startsWith('select')) {
     return res.status(400).json({ error: 'Solo consultas SELECT permitidas' });
   }
   try {
-    const result = getDb().prepare(query).all();
+    const db = await getDb();
+    const result = await db.all(query);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
